@@ -1,5 +1,12 @@
 # OSNotes
+
 操作系统课程笔记，记录自[绿导师原谅你了](https://space.bilibili.com/202224425/channel/collectiondetail?sid=192498)
+
+环境与预先执行的命令
+- 环境为 `WSL2 Ubuntu on Windows 10`
+- `sudo apt install python3`
+- `sudo apt install graphviz`
+- `pip3 install -r requirements.txt`
 
 ## 1. 操作系统概述
 
@@ -50,7 +57,7 @@ C程序的状态机模型
   - 汇编代码被处理器编译为更小的$\mu\rm{ops}$，每个$\mu\rm{op}$包含Fetch, Issue, Execute, Commit四个阶段
   - 每一周期尽可能多的补充$\mu\rm{op}$，指令按有向无环图的拓扑序进行乱序执行、按序提交
 
-## 4. 并发程序执行
+## 4. 并发程序执行与模型检验
 
 正确性不明的奇怪尝试（Peterson算法）
 - A和B争用厕所包间，示例代码[`peterson-simple.c`](peterson-simple.c)会出错，正确的代码[`peterson-barrier.c`](peterson-barrier.c)
@@ -62,3 +69,9 @@ C程序的状态机模型
     - 否则进入包间
   - 出包间后，放下自己的旗子
 - 正确的前提是使用Sequential内存模型
+
+年轻人的第一个Model Checker
+- `python3 model-checker.py mutex-bad.py | python3 visualize.py > a.html`
+- `python3 model-checker.py peterson-flag.py | python3 visualize.py -t > a.html`
+- `python3 model-checker.py dekker.py | python3 visualize.py -r > a.html`
+
