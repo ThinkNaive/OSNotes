@@ -75,3 +75,60 @@ C程序的状态机模型
 - `python3 model-checker.py peterson-flag.py | python3 visualize.py -t > a.html`
 - `python3 model-checker.py dekker.py | python3 visualize.py -r > a.html`
 
+## 5. 并发控制：互斥
+
+实现互斥的根本困难：不能同时读/写共享内存（并发的假设）
+- `load` 时不能写，看到的东西马上过时了
+- `store` 时不能读，只能闭着眼睛动手
+- 原子指令模型
+  - 保证之前的 `store` 都写入内存
+  - 保证 `load` / `store` 不与原子指令乱序
+
+自旋锁 (`Spin Lock`)
+- `xchg` 从硬件层面实现原子的交换指令
+- 使用 `xchg` 实现互斥：多个学生上厕所问题
+  - 初始时，厕所门口桌子上放把🔑
+  - 想上厕所的同学
+    - 闭眼使用 `xchg` 用手里的🔞交换桌子上的东西
+    - 睁眼看到手头有🔑才能进厕所
+  - 出厕所的同学
+    - 把🔑放到桌上
+- 缺陷
+  - 会触发处理器间的缓存同步，延迟增加
+  - 获得自旋锁的线程被系统切换出去，100%资源浪费
+- 使用场景
+  - 进入临界区的时间很短
+  - 持有自旋锁时禁止执行流切换
+- 实现
+  - 等待时让给其他线程
+  - 把锁的实现放到操作系统
+    - `syscall(SYSCALL_lock, &lk)`
+      - 如果失败，切换到其他线程
+    - `syscall(SYSCALL_unlock, &lk)`
+      - 释放锁，如果其他线程在等待则唤醒
+
+RISC-V如何保证内存一致性：Load-Reserved/Store-Reserved
+- LR: 读的时候加个Reserved标记，如果有中断/其他处理器访问则此标记被取消
+- SR: 当Reserved标记存在时可以写入
+
+Scalability: 性能的新维度
+- 随着线程增加导致的性能变差问题，见示例代码[`sum-scalability.c`](sum-scalability.c)
+
+互斥锁的分类
+- 自旋锁（线程直接共享locked）
+  - 更快的fast path
+    - `xchg` 成功`->`立即进入临界区，开销小
+  - 更慢的slow path
+    - `xchg` 失败`->`浪费CPU自旋等待
+- 睡眠锁（通过系统调用访问locked）
+  - 更快的slow path
+    - 上锁失败时线程不再占用CPU
+  - 更慢的fast path
+    - 即使上锁成功也要进出内核 `syscall`
+
+`Futex=Spin+Mutex`
+  - 使用自旋锁和睡眠锁
+  - Fast path: 上锁成功立即返回
+  - Slow path: 如果前面上锁失败，执行系统调用睡眠
+  - 见示例代码[`sum-scalability.c`](sum-scalability.c)，修改为 `#define FUTEX`
+
