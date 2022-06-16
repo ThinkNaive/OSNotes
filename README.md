@@ -132,3 +132,39 @@ Scalability: 性能的新维度
   - Slow path: 如果前面上锁失败，执行系统调用睡眠
   - 见示例代码[`sum-scalability.c`](sum-scalability.c)，修改为 `#define FUTEX`
 
+## 6. 并发控制：同步
+
+**问题：如何在多处理器上协同多个线程完成任务？**
+
+条件变量（Conditional Variables，CV）
+- `wait(cv, mutex)`
+  - 调用时必须保证已经获得mutex
+  - 释放mutex，进入睡眠状态
+- `signal/notify(cv)`
+  - 如果有线程正在等待cv，则唤醒其中一个线程
+- `broadcast/notifyAll(cv)`
+  - 唤醒全部正在等待cv的线程
+- 示例代码见[`pc-cv.c`](pc-cv.c)
+- 正确打开方式
+    ```
+    mutex_lock(&lk);
+    while (!cond) {
+      wait(&cv, &lk); // 等待cv并释放lk
+    }
+    assert(cond);
+    broadcast(&cv); // 唤醒其他可能满足条件的线程
+    mutex_unlock(&lk);
+    ```
+
+信号量
+- 示例代码见[`pc-sem.c`](pc-sem.c)
+- 在“一单位资源”明确的问题上更好用
+
+哲学家吃饭问题
+- 当左右手叉子都空闲时才获取
+
+分布式系统中常见的解决思路
+- 服务员统一管理资源的分配
+- 任务队列可以实现几乎任何并行算法
+
+## 7. 真实世界的并发编程
