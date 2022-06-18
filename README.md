@@ -188,7 +188,11 @@ Scalability: 性能的新维度
     - 成功`->`立即继续执行当前协程
     - 失败`->`立即yield到另一个可运行的协程
   - 使CPU利用率达到100%
-  - 使用steam流实现生产者-消费者模型
+  - 使用stream流实现生产者-消费者模型
+    ```
+    stream <- x
+    y := <- stream
+    ```
 
 人机交互程序
 - 不太复杂，既没太多计算，也没太多IO（**注重易用性**）
@@ -199,5 +203,7 @@ Scalability: 性能的新维度
     - async function
       - 总是返回一个Promise object
     - await promise
-      - `promise.then(...)`
+      ```
+      `promise.then(...)`
+      ```
 
