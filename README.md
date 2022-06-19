@@ -71,9 +71,11 @@ C程序的状态机模型
 - 正确的前提是使用Sequential内存模型
 
 年轻人的第一个Model Checker
-- `python3 model-checker.py mutex-bad.py | python3 visualize.py > a.html`
-- `python3 model-checker.py peterson-flag.py | python3 visualize.py -t > a.html`
-- `python3 model-checker.py dekker.py | python3 visualize.py -r > a.html`
+  ```
+  python3 model-checker.py mutex-bad.py | python3 visualize.py > a.html
+  python3 model-checker.py peterson-flag.py | python3 visualize.py -t > a.html
+  python3 model-checker.py dekker.py | python3 visualize.py -r > a.html
+  ```
 
 ## 5. 并发控制：互斥
 
@@ -196,7 +198,7 @@ Scalability: 性能的新维度
 
 人机交互程序
 - 不太复杂，既没太多计算，也没太多IO（**注重易用性**）
-- 网页浏览器采用异步事件模型
+- 网页浏览器/移动应用采用异步事件模型
   - 是一种并发模型，确保线程安全
   - API比如httpget仍然可以并行
   - Async-Await
@@ -206,4 +208,64 @@ Scalability: 性能的新维度
       ```
       `promise.then(...)`
       ```
+
+## 8. 并发BUG和应对
+
+应对并发BUG的方法
+- 软件是需求在计算机数字世界中的投影
+- BUG多的根本原因：编程语言的缺陷
+- 实在的方法：防御性编程
+  - 加断言，加检查
+
+并发BUG：死锁（Deadlock）
+- 出现线程互相等待的情况
+  - AA-Deadlock
+    - 一个线程自己等待自己
+    - 在不同的函数中持有并等待
+  - ABBA-Deadlock
+    - 上锁顺序导致持有并等待，例如哲学家吃饭
+- 避免死锁
+  - 死锁产生的必要条件
+    - 互斥：一个资源每次只能被一个进程使用
+    - 请求与保持：请求阻塞时，不释放已经获得的资源
+    - 不剥夺：已获得资源不能被强行剥夺
+    - 循环等待：进程间形成头尾相接的循环等待资源关系
+  - AA-Deadlock
+    - 示例代码[`spinlock-xv6.c`](spinlock-xv6.c)中的防御性编程
+      ```
+      push_off(); // 禁止中断避免死锁
+      if(holding(lk)) panic("acquire");
+      ```
+  - ABBA-Deadlock
+    - 严格按照固定顺序获取锁
+    - 示例代码见[`lock-ordering.py`](lock-ordering.py)
+      ```
+      python3 model-checker.py lock-ordering.py | python3 visualize.py > a.html
+      ```
+
+并发BUG：数据竞争（Data Race）
+- 不同线程同时访问同一段内存，且至少有一个写
+- 用互斥锁保护好共享数据
+- 实现并发控制的工具
+  - 互斥锁（lock/unlock）：原子性
+  - 条件变量（wait/signal）：同步
+- 错误类型
+  - 忘记上锁——原子性违反（Atomicity Violation，AV）
+    ```
+    Thread1                   Thread2
+    S1: if (t->info) -------↘
+    {                         S3: t->info = NULL;
+      S2: do(t->info); ←----↙
+    }
+    ```
+  - 忘记同步——顺序违反（Order Violation，OV）
+    ```
+    Thread1                   Thread2
+    S1: call_thread2(); ----↘
+                              S4: done = True;
+    S2: done = False; ←-----↙
+    S3: while (!done) {}
+    ```
+
+## 9. 操作系统的状态机模型
 
