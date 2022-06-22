@@ -4,9 +4,13 @@
 
 环境与预先执行的命令
 - 环境为 `WSL2 Ubuntu on Windows 10`
-- `sudo apt install python3`
-- `sudo apt install graphviz`
-- `pip3 install -r requirements.txt`
+  ```
+  sudo apt install python3
+  pip3 install -r requirements.txt
+  sudo apt install graphviz
+  sudo apt install qemu-system
+  sudo apt install gcc-multilib
+  ```
 
 ## 1. 操作系统概述
 
@@ -269,3 +273,55 @@ Scalability: 性能的新维度
 
 ## 9. 操作系统的状态机模型
 
+Bare-metal与程序员的约定
+- 为了让计算机能运行任何程序，一定存在软件/硬件的约定
+  - CPU reset后，处理器处于某个确定的状态
+    - PC指针能读到一条有效的指令
+- x86 Family：CPU Reset行为
+  - 寄存器会有初始状态
+    - EIP = 0x0000fff0（PC指针）
+    - CR0 = 0x60000010（16-bit非保护模式）
+    - EFLAGS = 0x00000002（关闭中断）
+- CPU Reset之后
+  - 从PC（CS:IP）指针处取指令、译码、执行...
+  - 从firmware开始执行，fff0通常是向firmware跳转的jmp指令
+- Legacy BOIS：约定
+  - Firmware必须提供机制，将用户数据载入内存
+  - 把第一个可引导设备的第一个扇区加载到物理内存的0x7c00位置
+    - 此时处理器处于16-bit模式
+    - 规定CS:IP = 0x7c00，即R[CS] << 4) | R[IP] = 0x7c00
+    - 加载512字节到内存，然后退出
+- 操作系统的状态机启动
+  - Firmware和boot loader共同完成操作系统的加载
+    - 初始化全局变量和栈并分配堆区
+    - 为main函数传递参数
+    - 最小的多线程系统，见示例代码[`thread-os.c`](thread-os.c)
+      ```
+      编译thread-os.c的步骤（Ubuntu WSL2）：
+      1. 下载 git clone https://github.com/NJU-ProjectN/abstract-machine.git，比如存放目录是/mnt/f/OSNotes/abstract-machine
+      2. 设置 export AM_HOME=/mnt/f/OSNotes/abstract-machine
+      3. 设置架构，比如 export ARCH=x86_64-qemu
+      4. 下载 git clone https://github.com/NJU-ProjectN/am-kernels.git
+      5. 进入目录 am-kernels/kernels/thread-os
+      6. 可能需要额外安装库 sudo apt install gcc-multilib
+      7. 编译 make
+      8. 运行并使用GDB调试
+        qemu-system-x86_64 -machine accel=tcg -smp 1 -S -s -drive format=raw,file=am-kernels/kernels/thread-os/build/thread-os-$ARCH &
+      ```
+      查看编译命令的方法
+      ```
+      1. make -nB | grep -ve '^\(\#\|echo\|mkdir\|make\)' | sed "s#$AM_HOME#\$AM_HOME#g" | sed "s#$PWD#.#g" | vim -
+      2. 进入vim后，输入 :%s/ /\r /g
+      ```
+- GDB调试QEMU
+  - 打开模拟器，暂停在初始状态，并打开调试端口
+    ```
+    qemu-system-x86_64 -S -s
+    ```
+  - GDB连接调试端口
+    ```
+    gdb
+    target remote localhost:1234
+    info registers
+    watch *0x7c00 # 硬件断点
+    ```
