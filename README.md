@@ -11,6 +11,7 @@
   sudo apt install qemu-system
   sudo apt install gcc-multilib
   ```
+  安装perf: [csdn-link](https://blog.csdn.net/qq_17743307/article/details/123081487)
 
 ## 1. 操作系统概述
 
@@ -325,3 +326,60 @@ Bare-metal与程序员的约定
     info registers
     watch *0x7c00 # 硬件断点
     ```
+
+## 10. 状态机模型的应用
+
+理解编译器和现代CPU
+- 编译器
+  - 源代码$S$（状态机）$\rightarrow$ 二进制代码$C$（状态机）
+- 编译的正确性
+  - $S$ 与 $C$ 的可观测行为严格一致
+- 超标量/乱序执行处理器
+  - 允许在状态机上“跳跃”
+  - 示例代码见[`ilp-demo.c`](ilp-demo.c)，由于超标量，执行速度远远大于主频
+
+查看状态机执行
+- Trace和调试器
+  - `strace` / `gdb`
+    ```
+    跟踪系统调用 strace -T ./a.out |& vim -
+    其中-T表示跟踪系统调用的执行时间
+    ```
+  - Time-Traval Debugging
+    - 在时间上“后退”
+    - gdb的记录与回溯功能
+      - 开始记录 `record full`
+      - 结束记录 `record stop`
+      - 回溯调试 `reverse-step` / `reverse-stepi`
+    - 示例代码见[`rdrand.c`](rdrand.c)
+      ```
+      gdb ./a.out
+      layout src
+      start
+      s
+      p val
+      record full
+      s
+      p val
+      layout asm
+      si
+      si
+      p val
+      rsi // 后退一步
+      rsi // 后退一步
+      ```
+  - Record & Play
+    - 记录程序执行状态与参数，结束后可以重现程序的行为
+    - 只需要记录non-deterministic的指令的效果
+
+采样状态机执行（得到执行的summary）
+- Profiler和性能摘要
+  - 测试[`ilp-demo.c`](ilp-demo.c)的性能
+    ```
+    perf stat ./a.out
+    perf record ./a.out
+    perf report
+    ```
+Model Checker / Verifier
+- 检查并发程序
+- 检查non-deterministic的状态机
