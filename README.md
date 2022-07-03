@@ -383,3 +383,57 @@ Bare-metal与程序员的约定
 Model Checker / Verifier
 - 检查并发程序
 - 检查non-deterministic的状态机
+
+## 11. 操作系统上的最小进程
+
+定制最小的Linux
+- 没有存储设备，只包含两个文件的initramfs
+  - [linux-minimal.zip](https://box.nju.edu.cn/f/3f67e092e1ba441187d9/?dl=1)
+    ```
+    cd linux-minimal
+    make && make run
+    ```
+- 启动后加载一个进程init，负责创建并管理整个世界
+  1. CPU Reset (状态机初始化)
+  2. Firmware
+  3. Loader
+  4. Kernel_start()
+  5. 加载一个无限循环的进程init，用syscall创建整个世界
+  6. 程序执行+系统调用
+
+操作系统为程序提供API
+- 进程（状态机）管理
+  - fork, execve, exit - 状态机管理
+- 存储（地址空间）管理
+  - mmap - 虚拟地址空间管理
+- 文件（数据对象）管理
+  - open, close, read, write - 文件访问管理
+  - mkdir, link, unlink - 目录管理
+
+`fork()` - 创建（分叉）
+- 把自动机的状态完整复制一份
+- fork函数返回值，对于父进程返回子进程的进程号，子进程返回0
+- 示例代码见[fork-3.c](fork-3.c)
+- [fork-printf.c](fork-printf.c)
+  ```
+  ./a.out 与 ./a.out | cat
+  ```
+  两个指令输出不同数量的输出，为什么？
+    - 库函数状态会被拷贝，这里`printf`的缓冲区也被`fork`了
+    - 进程结束时才把缓冲区输出清空
+    - 解决办法是在`printf`后面加`fflush`，打印并清空缓冲区
+
+`execve()` - 重置状态机
+- 将状态机重置为某个程序的初始状态，原有程序被替换
+- 示例代码见[execve-demo.c](execve-demo.c)
+
+`_exit()` - 销毁状态机
+- 示例代码见[exit-demo.c](exit-demo.c)
+- `exit(0)` - stdlib.h中声明的函数
+  - 调用`atexit`
+- `_exit(0)` - glibc的syscall wrapper
+  - 执行`exit_group`系统调用终止整个进程（所有线程）
+  - 不调用`atexit`
+- `syscall(SYS_exit, 0)` - 系统调用
+  - 执行`exit`系统调用终止当前线程
+  - 不调用`atexit`
