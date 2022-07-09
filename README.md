@@ -437,3 +437,38 @@ Model Checker / Verifier
 - `syscall(SYS_exit, 0)` - 系统调用
   - 执行`exit`系统调用终止当前线程
   - 不调用`atexit`
+
+## 12. 进程的地址空间
+
+查看进程的地址空间
+- `pmap [pid]`
+- 无需陷入内核的系统调用
+  - 例子[exit-demo.c](exit-demo.c)
+    - gdb调试
+    - 使用callq time
+    - 所有进程调用时均指向同一页
+
+进程的地址空间管理
+- `mmap`
+  - 管理进程地址空间的系统调用
+  - 状态上增加/删除/修改一段可访问的内存
+  - 把文件映射到进程地址空间
+    - 例子1：用`mmap`申请大量内存([mmap-alloc.c](mmap-alloc.c))
+    - 例子2：用`mmap`映射整个磁盘([mmap-disk.py](mmap-disk.py))
+  - 一致性问题
+    - 见手册`msync (2)`
+
+地址空间的隔离
+  - 每个`*ptr`只能访问本进程(状态机)的内存
+  - 例如金山游侠
+    - 访问修改内存`/proc/[pid]/mem`
+    - 例子[dosbox-hack.c](dosbox-hack.c)，修改命令与征服（dosbox，candc）的金币
+  - 例如按键精灵
+    - [evdev](https://www.kernel.org/doc/html/latest/input/input.html)
+  - 例如变速齿轮，调整游戏的逻辑更新速度
+    - 本质是欺骗进程的时钟
+    - 源头：闹钟、睡眠、`gettimeofday`
+  - 代码注入（Hooking）
+    - 改代码
+    - 软件热补丁[dsu.c](dsu.c)，在运行时将函数替换
+
